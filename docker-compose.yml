@@ -1,0 +1,23 @@
+version: '2'
+
+services:
+  app:
+    image: tutum/hello-world
+    container_name: app
+    labels:
+      - "traefik.backend=app"
+      - "traefik.frontend.rule=Host:my-redash-domain.com" # <-- Change this domain
+      - "traefik.enable=true"
+      - "traefik.port=80"
+  
+  traefik:
+    image: traefik
+    restart: always
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./traefik.toml:/traefik.toml
+      - ./acme.json:/acme.json
+    container_name: traefik

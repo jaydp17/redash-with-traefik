@@ -1,0 +1,27 @@
+debug = true
+checkNewVersion = true
+logLevel = "ERROR"
+defaultEntryPoints = ["https","http"]
+
+[entryPoints]
+  [entryPoints.http]
+  address = ":80"
+    [entryPoints.http.redirect]
+    entryPoint = "https"
+  [entryPoints.https]
+  address = ":443"
+  [entryPoints.https.tls]
+
+[retry]
+
+[docker]
+endpoint = "unix:///var/run/docker.sock"
+domain = "my-redash-domain.com" # <-- change this domain
+watch = true
+exposedbydefault = false
+
+[acme]
+email = "my-awesome-email@gmail.com" # <-- change this email
+storage = "acme.json"
+entryPoint = "https"
+OnHostRule = true
