@@ -1,14 +1,52 @@
+# This is an example configuration for Docker Compose. Make sure to atleast update
+# the cookie secret & postgres database password.
+#
+# Some other recommendations:
+# 1. To persist Postgres data, assign it a volume host location.
+# 2. Split the worker service to adhoc workers and scheduled queries workers.
 version: '2'
-
 services:
-  app:
-    image: tutum/hello-world
-    container_name: app
+
+  server:
+    image: redash/redash:latest
+    command: server
+    depends_on:
+      - postgres
+      - redis
+    ports:
+      - "5000:5000"
+    environment:
+      PYTHONUNBUFFERED: 0
+      REDASH_LOG_LEVEL: "INFO"
+      REDASH_REDIS_URL: "redis://redis:6379/0"
+      REDASH_DATABASE_URL: "postgresql://postgres@postgres/postgres"
+      REDASH_COOKIE_SECRET: veryverysecret
+      REDASH_WEB_WORKERS: 4
+    container_name: redash
     labels:
-      - "traefik.backend=app"
-      - "traefik.frontend.rule=Host:my-redash-domain.com" # <-- Change this domain
+      - "traefik.backend=redash"
+      - "traefik.frontend.rule=Host:my-awesome-domain.com" # <-- Change this domain
       - "traefik.enable=true"
-      - "traefik.port=80"
+      - "traefik.port=5000"
+
+  worker:
+    image: redash/redash:latest
+    command: scheduler
+    environment:
+      PYTHONUNBUFFERED: 0
+      REDASH_LOG_LEVEL: "INFO"
+      REDASH_REDIS_URL: "redis://redis:6379/0"
+      REDASH_DATABASE_URL: "postgresql://postgres@postgres/postgres"
+      QUEUES: "queries,scheduled_queries,celery"
+      WORKERS_COUNT: 2
+
+  redis:
+    image: redis:3.0-alpine
+
+  postgres:
+    image: postgres:9.5.6-alpine
+    volumes:
+      - /home/ubuntu/redash-pgdata:/var/lib/postgresql/data # <-- Change the host path
   
   traefik:
     image: traefik
@@ -21,3 +59,7 @@ services:
       - ./traefik.toml:/traefik.toml
       - ./acme.json:/acme.json
     container_name: traefik
+    depends_on:
+      - server
+    links:
+      - server:redash
